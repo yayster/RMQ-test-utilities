@@ -1,0 +1,7 @@
+use strict;
+use warnings;
+use rmq_utility;
+
+my $mo = rmq_utility->new;
+$mo->initialize( $0 );
+$mo->MainLoop;
