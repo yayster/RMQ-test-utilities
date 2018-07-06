@@ -45,9 +45,9 @@ sub initialize {
     my $title = shift || 'unknown';
     # Tried to use has-generated method to hold these variables, but they did not work.
     $self->{message} = "Rabbitmq Utilities\n\n(c) Copyright 2018 - David N. Kayal";
-    $self->{connection_flag} = 0;
+    $self->{connection_flag} = 0;    
+    $self->{current_host} = $self->credentials->initialize;
     $self->mw->title( 'RMQ Utilities: ' . $title );
-    $self->credentials->initialize;
     $self->connection_toggle;
     $self->select_host;
     $self->connection_status_indicator;
@@ -86,7 +86,13 @@ sub select_host {
         -options => $self->credentials->hosts,
         -command => sub {
 	    my $_new_host = shift;
-	    $self->credentials->update_credentials( $_new_host ) 
+	    unless( $_new_host eq $self->{current_host} ) {
+		if( $self->{connection_flag} ) {
+		    print 'Disconnecting from ' . $self->credentials->HOSTNAME . "\t";
+		    $self->{connection_flag} = '0' unless( length $self->rmq->disconnect_from_broker );
+		}
+		$self->{current_host} = $self->credentials->update_credentials( $_new_host )
+	    }
 	},
 	-variable => \$self->credentials->host,
 	-textvariable => \$self->credentials->host,
@@ -98,26 +104,29 @@ sub select_host {
     );
 }
 
+sub toggle_connection {
+    my $self = shift;
+    print time . "\t" . 'toggle' . "\t" . $self->{connection_flag} . "\t";
+    if( $self->{connection_flag} ) {
+	print 'Disconnecting from ' . $self->credentials->HOSTNAME . "\t";
+	$self->{connection_flag} = '0' unless( length $self->rmq->disconnect_from_broker );
+    } else {
+	print 'Connecting to ' . $self->credentials->HOSTNAME . "\t";
+	$self->{connection_flag} = 
+	    $self->rmq->connect_to_broker( $self->credentials->HOSTNAME,
+					   $self->credentials->LOGIN,
+					   $self->credentials->PASSWORD,
+					   $self->credentials->PORT,
+					   $self->credentials->HEARTBEAT
+	    );
+    }
+    print $self->{connection_flag} . "\n";
+}
+
 sub connection_toggle {
     my $self = shift;
     $self->mf->Button(  -text => 'Toggle Connection',
-			-command => sub{ 
-			    print time . "\t" . 'toggle' . "\t" . $self->{connection_flag} . "\t";
-			    if( $self->{connection_flag} ) {
-				print 'Disconnecting from ' . $self->credentials->HOSTNAME . "\t";
-				$self->{connection_flag} = '0' unless( length $self->rmq->disconnect_from_broker );
-			    } else {
-				print 'Connecting to ' . $self->credentials->HOSTNAME . "\t";
-				$self->{connection_flag} = 
-				    $self->rmq->connect_to_broker( $self->credentials->HOSTNAME,
-								   $self->credentials->LOGIN,
-								   $self->credentials->PASSWORD,
-								   $self->credentials->PORT,
-								   $self->credentials->HEARTBEAT
-				    );
-			    }
-			    print $self->{connection_flag} . "\n";
-			},
+			-command => sub{ $self->toggle_connection; },
 			-height => 1,
 			-width  => 15,
 	)->place( -anchor => 'ne',

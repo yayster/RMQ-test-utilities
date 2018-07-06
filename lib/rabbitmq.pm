@@ -40,7 +40,6 @@ sub connect_to_broker {
 	return $self->rmq_core->is_connected;
     }
     catch {
-	say 'caught an issue:';
 	if( $_count == 3 ) {
 	    die 'too many attempts';
 	    CORE::exit(999);

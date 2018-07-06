@@ -38,11 +38,7 @@ has LOGIN => ( is => 'rw', default => 'unknown' );
 has PASSWORD => ( is => 'rw', default => 'unknown' );
 has HEARTBEAT => ( is => 'rw', default => 60 );
 
-has host => ( is => 'lazy', );
-sub _build_host {
-    my $self = shift;
-    return ${ $self->hosts }[0];
-}
+has host => ( is => 'rw', default => 'unknown' );
 
 sub update_credentials {
     my $self = shift;
@@ -54,11 +50,16 @@ sub update_credentials {
     foreach my $_credential ( @_credentials ) {
 	$self->$_credential( $_hash{ $_credential } ) if( length $_hash{ $_credential } );
     }
+    $self->host( $host );
+    return( $self->host );
 }
 
 sub initialize {
     my $self = shift;
-    $self->update_credentials( $self->host );
+    say $self->host;
+    $self->host( ${ $self->hosts}[0] );
+    say $self->host;
+    return( $self->update_credentials( $self->host ) );
 }
 
 1;
